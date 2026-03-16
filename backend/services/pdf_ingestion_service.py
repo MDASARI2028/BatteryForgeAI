@@ -7,13 +7,17 @@ for intelligent Q&A via the chat agent.
 
 import os
 import io
+import base64
+import json
 from pathlib import Path
 from typing import List, Dict
-import google.generativeai as genai
 import hashlib
 from datetime import datetime
+from services.model_client import model_client
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
+import logging
+
+logger = logging.getLogger("pdf_ingestion_service")
 
 class PDFIngestionService:
     def __init__(self):
@@ -46,37 +50,36 @@ class PDFIngestionService:
                     if text.strip():
                         text_content.append(f"--- Page {page_num + 1} ---\n{text}")
                 except Exception as e:
-                    print(f"Error extracting page {page_num + 1}: {e}")
+                    logger.warning("Error extracting page %d: %s", page_num + 1, e)
                     continue
             
             return "\n\n".join(text_content)
             
         except ImportError:
-            print("PyPDF2 not installed.")
+            logger.warning("PyPDF2 not installed.")
             return None
         except Exception as e:
-            print(f"PyPDF2 extraction failed: {e}")
+            logger.error("PyPDF2 extraction failed: %s", e)
             return None
     
-    async def _extract_with_gemini(self, pdf_bytes: bytes, filename: str) -> str:
+    async def _extract_with_vision_model(self, pdf_bytes: bytes, filename: str) -> str:
         """
-        Fallback: Use Gemini 3 to read PDF (multimodal)
+        Fallback: Use Vision model to read PDF (multimodal) via HTTP client
         """
         try:
-            model = genai.GenerativeModel('gemini-3-pro-preview')
-            
             prompt = """
             Extract ALL text content from this technical document.
             Preserve headings, sections, tables, and technical specifications.
             Return the full text in a structured format.
             """
             
-            response = await model.generate_content_async([
-                prompt,
-                {"mime_type": "application/pdf", "data": pdf_bytes}
-            ])
+            if len(pdf_bytes) > 15_000_000:
+                raise ValueError("PDF too large for model extraction")
             
-            return response.text
+            pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
+            response_text = await model_client.generate_async(prompt, image_b64=pdf_b64, task="vision")
+            
+            return response_text
             
         except Exception as e:
             raise Exception(f"Failed to extract PDF content: {e}")
@@ -115,18 +118,14 @@ class PDFIngestionService:
             if chunk:
                 chunks.append(chunk)
             
-            # Move start with overlap
-            start = end - overlap
-            
-            # Avoid infinite loops
-            if start >= end:
-                start = end
+            # Move start with overlap ensuring no infinite loops
+            start = max(end - overlap, start + 1)
         
         return chunks
     
-    async def generate_metadata_with_gemini(self, text_sample: str, filename: str) -> Dict:
+    async def generate_document_metadata(self, text_sample: str, filename: str) -> Dict:
         """
-        Use Gemini to extract metadata from document
+        Use model to extract metadata from document
         
         Args:
             text_sample: First 2000 chars of document
@@ -136,8 +135,6 @@ class PDFIngestionService:
             dict with extracted metadata
         """
         try:
-            model = genai.GenerativeModel('gemini-3-flash-preview')
-            
             prompt = f"""
             Analyze this technical document excerpt and extract metadata.
             
@@ -156,21 +153,22 @@ class PDFIngestionService:
             }}
             """
             
-            response = await model.generate_content_async(prompt)
+            result_text = await model_client.generate_async(prompt, task="text")
             
-            # Extract JSON
-            import json
-            result_text = response.text
-            if "```json" in result_text:
-                result_text = result_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in result_text:
-                result_text = result_text.split("```")[1].split("```")[0].strip()
+            # Extract JSON safely
+            start = result_text.find("{")
+            end = result_text.rfind("}")
             
-            metadata = json.loads(result_text)
+            if start != -1 and end != -1:
+                json_str = result_text[start:end+1]
+                metadata = json.loads(json_str)
+            else:
+                raise ValueError("No JSON object found in metadata response")
+                
             return metadata
             
         except Exception as e:
-            print(f"Metadata extraction failed: {e}")
+            logger.error("Metadata extraction failed: %s", e)
             return {
                 "document_type": "Unknown",
                 "title": filename,
@@ -193,31 +191,27 @@ class PDFIngestionService:
         """
         try:
             # 1. Extract text
-            print(f"Extracting text from {filename}...")
+            logger.info("Extracting text from %s...", filename)
             # Run CPU-bound PyPDF2 in a thread pool
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             try:
                 full_text = await loop.run_in_executor(None, self.extract_text_from_pdf, pdf_bytes, filename)
             except Exception:
-                 # Fallback to Gemini if PyPDF2 fails (handled in extract_text_from_pdf but we want the async gemini path if that was the fallback logic)
-                 # Revisiting extract_text_from_pdf: it calls _extract_with_gemini as fallback. 
-                 # Since _extract_with_gemini is now async, we need to handle that.
-                 # Let's Refactor extract_text_from_pdf to be purely sync PyPDF2, and handle fallback here.
+                 # Fallback to multimodal model extraction if PyPDF2 fails
                  full_text = None
 
             if not full_text:
-                 # If sync extraction failed or returned nothing, try async Gemini
-                 full_text = await self._extract_with_gemini(pdf_bytes, filename)
+                 # If sync extraction failed or returned nothing, try async vision model
+                 full_text = await self._extract_with_vision_model(pdf_bytes, filename)
             
             if not full_text or len(full_text) < 50:
                 raise Exception("Insufficient text content extracted")
             
             # 2. Generate metadata
-            print(f"Generating metadata...")
-            metadata = await self.generate_metadata_with_gemini(full_text, filename)
-            
+            logger.info("Generating metadata...")
+            metadata = await self.generate_document_metadata(full_text[:2000], filename)            
             # 3. Chunk document
-            print(f"Chunking document...")
+            logger.info("Chunking document...")
             chunks = self.chunk_document(full_text, chunk_size=1000, overlap=200)
             
             # 4. Add to RAG service
@@ -245,7 +239,7 @@ class PDFIngestionService:
                 chunk_metadatas.append(chunk_meta)
             
             # Add to ChromaDB
-            print(f"Adding {len(chunks)} chunks to vector database...")
+            logger.info("Adding %d chunks to vector database...", len(chunks))
             rag_service.add_documents(
                 documents=chunks,
                 metadatas=chunk_metadatas,
@@ -253,7 +247,8 @@ class PDFIngestionService:
             )
             
             # Save original PDF
-            pdf_path = self.upload_dir / f"{file_hash}_{filename}"
+            safe_name = filename.replace("/", "_").replace("\\", "_")
+            pdf_path = self.upload_dir / f"{file_hash}_{safe_name}"
             with open(pdf_path, 'wb') as f:
                 f.write(pdf_bytes)
             
@@ -295,11 +290,11 @@ class PDFIngestionService:
                     docs_by_file[filename] = {
                         "filename": filename,
                         "title": metadata.get('title', filename),
-                        "document_type": metadata.get('document_type', 'Unknown'),
-                        "manufacturer": metadata.get('manufacturer', 'Unknown'),
-                        "battery_chemistry": metadata.get('battery_chemistry', 'Unknown'),
+                        "document_type": metadata.get('document_type', "Unknown"),
+                        "manufacturer": metadata.get('manufacturer', "Unknown"),
+                        "battery_chemistry": metadata.get('battery_chemistry', "Unknown"),
                         "chunks": 1,
-                        "upload_date": metadata.get('upload_date', 'Unknown')
+                        "upload_date": metadata.get('upload_date', "Unknown")
                     }
                 else:
                     docs_by_file[filename]['chunks'] += 1
@@ -307,7 +302,7 @@ class PDFIngestionService:
             return list(docs_by_file.values())
             
         except Exception as e:
-            print(f"Error listing documents: {e}")
+            logger.error("Error listing documents: %s", e)
             return []
 
 

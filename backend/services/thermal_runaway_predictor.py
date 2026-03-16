@@ -5,18 +5,16 @@ Uses Gemini 3 Vision to analyze battery thermal images/video and predict
 thermal runaway events with countdown timer.
 """
 
-import google.generativeai as genai
-from PIL import Image
 import io
 import numpy as np
-from datetime import datetime, timedelta
 import base64
+import json
+from datetime import datetime, timedelta
+from services.model_client import model_client
 
 class ThermalRunawayPredictor:
     def __init__(self):
         """Initialize the thermal runaway prediction service"""
-        self.model = genai.GenerativeModel('gemini-3-flash-preview')
-        
         # Thermal safety thresholds (celsius)
         self.thresholds = {
             'normal': 45,
@@ -38,11 +36,10 @@ class ThermalRunawayPredictor:
             dict with prediction results
         """
         try:
-            image = Image.open(io.BytesIO(image_data))
             
-            # Gemini Vision Analysis
+            # RunPod Vision Analysis (using ModelClient)
             prompt = f"""
-            You are an expert in lithium-ion battery thermal safety. Analyze this battery thermal image.
+            Analyze the attached thermal image of a lithium-ion battery cell.
             
             Current Temperature: {current_temp}°C (if provided)
             
@@ -66,19 +63,31 @@ class ThermalRunawayPredictor:
             }}
             """
             
-            response = self.model.generate_content([prompt, image])
+            image_b64 = base64.b64encode(image_data).decode("utf-8")
+            try:
+                result_text = model_client.generate(prompt, image_b64=image_b64, task="vision")
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': f"Model inference failed: {str(e)}"
+                }
             
-            # Parse response
-            result_text = response.text
+            # Extract JSON safely
+            start = result_text.find("{")
+            end = result_text.rfind("}")
             
-            # Extract JSON (handle markdown code blocks)
-            if "```json" in result_text:
-                result_text = result_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in result_text:
-                result_text = result_text.split("```")[1].split("```")[0].strip()
-            
-            import json
-            prediction = json.loads(result_text)
+            if start != -1 and end != -1:
+                json_str = result_text[start:end+1]
+                prediction = json.loads(json_str)
+            else:
+                return {
+                    'success': False,
+                    'error': "No JSON object found in model response"
+                }
+                
+            valid_risks = {"normal", "elevated", "warning", "critical", "imminent"}
+            if prediction.get("risk_level") not in valid_risks:
+                prediction["risk_level"] = "warning"
             
             # Add metadata
             prediction['analysis_timestamp'] = datetime.now().isoformat()

@@ -1,25 +1,181 @@
 import os
-import google.generativeai as genai
-from dotenv import load_dotenv
+import base64
 import json
+import logging
+import numpy as np
 
-load_dotenv()
+from services.model_client import model_client
 
-# Configure Gemini
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+logger = logging.getLogger("ai_service")
+
+# JSON enforcement suffix for prompts expecting structured output
+JSON_INSTRUCTION = (
+    "\n\nCRITICAL: Respond with ONLY a valid JSON object. "
+    "No markdown fences. No explanation text. "
+    "Start with { and end with }."
+)
+
+
+class _ChatResponse:
+    """Mimics the Gemini response object with a .text attribute."""
+    def __init__(self, text: str):
+        self.text = text
+
+
+class _ModelClientChat:
+    """
+    Lightweight chat wrapper that mimics genai.GenerativeModel.start_chat().
+    
+    Provides .send_message(text) -> response with .text attribute.
+    Maintains conversation history for context.
+    """
+    def __init__(self, system_instruction: str, service, history: list = None):
+        self.system_instruction = system_instruction.strip()
+        self.service = service
+        self.history = history or []
+    
+    async def send_message(self, message: str) -> _ChatResponse:
+        """Send a message and get a response, maintaining conversation context and handling tools."""
+        import re
+        import ast
+        
+        # Build full prompt with system instruction and history
+        full_prompt = f"{self.system_instruction}\n\n"
+        
+        for turn in self.history:
+            role = turn.get("role", "user")
+            content = turn.get("parts", [{"text": ""}])[0]
+            if isinstance(content, dict):
+                content = content.get("text", "")
+            full_prompt += f"{role}: {content}\n"
+        
+        full_prompt += f"user: {message}\nassistant:"
+        
+        response_text = await model_client.generate_async(full_prompt, task="text")
+        
+        # Continuously check for tool calls until model provides a final text response
+        tool_pattern = r'\[TOOL_CALL:\s*([a-zA-Z_][a-zA-Z0-9_]*)\(([^)]*)\)\]'
+        max_tool_loops = 5
+        loop_count = 0
+        
+        ALLOWED_TOOLS = {
+            "search_knowledge_base",
+            "simulate_charging_analysis",
+            "predict_battery_life",
+            "parse_logs",
+            "create_incident_report",
+            "simulate_fleet"
+        }
+        
+        while True:
+            matches = re.findall(tool_pattern, response_text)
+            if not matches:
+                break
+                
+            loop_count += 1
+            if loop_count > max_tool_loops:
+                logger.warning("Agent exceeded maximum tool execution loops (%d).", max_tool_loops)
+                break
+                
+            full_prompt += "assistant: [tool call executed]\n"
+
+            # Execute all tools found in this turn
+            for raw_tool_name, args_str in matches:
+                if raw_tool_name not in ALLOWED_TOOLS:
+                    logger.warning("Agent attempted to run forbidden/hallucinated tool: %s", raw_tool_name)
+                    full_prompt += f"system: [TOOL_ERROR {raw_tool_name}]: Not an allowed tool. You can only use tools from the provided list.\n"
+                    continue
+                    
+                tool_name = f"tool_{raw_tool_name}"
+                args = ()
+                
+                if args_str.strip():
+                    try:
+                        # Safely parse arguments like ("thermal", "test")
+                        args = ast.literal_eval(f"({args_str})")
+                        if not isinstance(args, tuple):
+                            args = (args,)
+                    except Exception as e:
+                        # Fallback for unquoted strings: search_knowledge_base(lithium, failure)
+                        logger.warning("Literal eval failed for '%s', falling back to split tuple: %s", args_str, e)
+                        args = tuple(arg.strip() for arg in args_str.split(",") if arg.strip())
+                        
+                try:
+                    tool_method = getattr(self.service, tool_name, None)
+                    if tool_method is None:
+                        logger.warning("Unknown tool requested: %s", tool_name)
+                        full_prompt += f"system: [TOOL_ERROR {raw_tool_name}]: Unknown tool implementation.\n"
+                        continue
+                        
+                    import inspect
+                    # Call tool
+                    if inspect.iscoroutinefunction(tool_method):
+                        tool_result = await tool_method(*args)
+                    else:
+                        tool_result = tool_method(*args)
+                    if isinstance(tool_result, (dict, list)):
+                        tool_result_str = json.dumps(tool_result)[:2000]
+                    else:
+                        tool_result_str = str(tool_result)[:2000]
+                    full_prompt += f"system: [TOOL_RESULT {raw_tool_name}]: {tool_result_str}\n"
+                except Exception as e:
+                    logger.error("Tool execution failed: %s", e)
+                    tool_result_str = str(e)[:2000]
+                    full_prompt += f"system: [TOOL_ERROR {raw_tool_name}]: {tool_result_str}\n"
+            
+            # Guard against massive prompt growth inside the tool loop
+            if len(full_prompt) > 50000:
+                logger.warning("Agent prompt exceeded safe size, truncating history.")
+                full_prompt = self.system_instruction + "\n\n...[TRUNCATED HISTORY]...\n" + full_prompt[-40000:]
+            
+            full_prompt += "assistant:"
+            response_text = await model_client.generate_async(full_prompt, task="text")
+                
+        # Update history with limit
+        MAX_HISTORY = 6
+        self.history.append({"role": "user", "parts": [{"text": message}]})
+        self.history.append({"role": "model", "parts": [{"text": response_text}]})
+        self.history = self.history[-MAX_HISTORY:]
+        
+        return _ChatResponse(response_text)
+
 
 class GeminiService:
     def __init__(self):
-        # Using Gemini 3 Pro Preview (Hackathon Compliant)
-        self.vision_model = genai.GenerativeModel('models/gemini-3-pro-preview')
-        # Using Gemini 3 Flash for high-speed tasks
-        self.flash_model = genai.GenerativeModel('models/gemini-3-flash-preview')
-        # Using Gemini 3 Pro for reasoning (Deep Think fallback per user request)
-        self.reasoning_model = genai.GenerativeModel('models/gemini-3-pro-preview')
+        # Model calls are now routed through model_client (RunPod API)
+        # No Gemini SDK initialization needed
+        pass
+
+    def _build_prompt(self, prompt: str, enforce_json: bool = True) -> str:
+        """Standardize prompt construction with optional JSON enforcement."""
+        final = prompt.strip()
+        if enforce_json:
+            final += JSON_INSTRUCTION
+        return final
+
+    def generate_raw_text(self, prompt: str) -> str:
+        """Simple text generation helper for external callers (e.g. digital_twin_service)."""
+        try:
+            return model_client.generate(self._build_prompt(prompt, enforce_json=False), task="text")
+        except Exception as e:
+            logger.error("Raw generation failed: %s", e)
+            return ""
+
+    def _llm_json(self, prompt: str, task: str = "text") -> dict:
+        """Helper to generate text and extract JSON to reduce boilerplate."""
+        response_text = model_client.generate(self._build_prompt(prompt), task=task)
+        return self._extract_json(response_text)
+
+    async def _llm_json_async(self, prompt: str, image_b64: str = None, task: str = "text") -> dict:
+        """Async helper to generate text (with optional image) and extract JSON."""
+        response_text = await model_client.generate_async(
+            self._build_prompt(prompt), image_b64=image_b64, task=task
+        )
+        return self._extract_json(response_text)
 
     def _sanitize_for_json(self, obj):
         """Recursively converts NumPy types to Python native types for JSON serialization."""
-        import numpy as np
         if isinstance(obj, dict):
             return {k: self._sanitize_for_json(v) for k, v in obj.items()}
         elif isinstance(obj, list):
@@ -32,6 +188,8 @@ class GeminiService:
             return float(obj)
         elif isinstance(obj, (np.bool_)):
             return bool(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
         return obj
 
     async def analyze_defect(self, image_data, mime_type="image/jpeg"):
@@ -53,14 +211,15 @@ class GeminiService:
         """
         
         try:
-            response = self.vision_model.generate_content([
-                prompt,
-                {"mime_type": mime_type, "data": image_data}
-            ])
-            # Basic cleanup to ensure JSON
-            return self._extract_json(response.text)
+            if len(image_data) > 15_000_000:
+                logger.warning(
+                    "Large image input detected (%d bytes). Vision inference may be slow.",
+                    len(image_data)
+                )
+            image_b64 = base64.b64encode(image_data).decode("utf-8")
+            return await self._llm_json_async(prompt, image_b64=image_b64, task="vision")
         except Exception as e:
-            print(f"Gemini Vision Error: {e}")
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def analyze_pcb_defect(self, image_data, mime_type="image/jpeg"):
@@ -100,13 +259,15 @@ class GeminiService:
         }
         """
         try:
-            response = self.vision_model.generate_content([
-                prompt,
-                {"mime_type": mime_type, "data": image_data}
-            ])
-            return self._extract_json(response.text)
+            if len(image_data) > 15_000_000:
+                logger.warning(
+                    "Large image input detected (%d bytes). Vision inference may be slow.",
+                    len(image_data)
+                )
+            image_b64 = base64.b64encode(image_data).decode("utf-8")
+            return await self._llm_json_async(prompt, image_b64=image_b64, task="vision")
         except Exception as e:
-            print(f"Gemini PCB Vision Error: {e}")
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def analyze_gerber_text(self, gerber_content: str):
@@ -136,10 +297,9 @@ class GeminiService:
         }}
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"Gemini Gerber Analysis Error: {e}")
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def analyze_charging_curve(self, image_buffer):
@@ -168,13 +328,15 @@ class GeminiService:
         
         try:
             image_data = image_buffer.getvalue()
-            response = self.vision_model.generate_content([
-                prompt,
-                {"mime_type": "image/png", "data": image_data}
-            ])
-            return self._extract_json(response.text)
+            if len(image_data) > 15_000_000:
+                logger.warning(
+                    "Large image input detected (%d bytes). Vision inference may be slow.",
+                    len(image_data)
+                )
+            image_b64 = base64.b64encode(image_data).decode("utf-8")
+            return await self._llm_json_async(prompt, image_b64=image_b64, task="vision")
         except Exception as e:
-            print(f"Error in analyze_charging_curve: {e}")
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def parse_fault_log(self, log_text, context=None):
@@ -200,10 +362,9 @@ class GeminiService:
         """
 
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"Gemini Text Error: {e}")
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
 
@@ -230,9 +391,9 @@ class GeminiService:
         }}
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     def _extract_json(self, text: str):
@@ -253,16 +414,16 @@ class GeminiService:
             
             # Fallback: Try regex if simple find fails (e.g. nested structures might be fine, but just in case)
             import re
-            match = re.search(r'(\{.*\})', clean_text, re.DOTALL)
+            match = re.search(r'(\{.*?\})', clean_text, re.S)
             if match:
                 return json.loads(match.group(1))
 
             # Last resort: Try loading the stripped text directly
             return json.loads(clean_text)
         except json.JSONDecodeError as e:
-            print(f"JSON Parse Error: {e} | Text: {text[:100]}...")
-            # Attempt to fix common issues (e.g. trailing commas) could go here
-            raise e
+            logger.error("JSON parse error: %s | Text: %s...", e, text[:100])
+            # Safe JSON fallback to prevent endpoint crash
+            return {"error": "invalid_json", "raw": text[:500], "parsed": False}
 
 
     async def predict_aging_trajectory(self, current_soh: float, start_cycle: int):
@@ -288,7 +449,7 @@ class GeminiService:
             "cycles": [0, 50, 100, ...], 
             "soh": [100.0, 99.8, 99.5, ...],
             "analysis": {{
-                "prediction_engine": "Gemini 3.0 Pro + PyBaMM (Hybrid)",
+                "prediction_engine": "AI + Physics Hybrid (Hybrid)",
                 "summary": "Detailed technical summary (2 sentences) of the degradation trend and projected RUL.",
                 "recommendation": "One actionable recommendation to extend cycle life."
             }}
@@ -299,11 +460,9 @@ class GeminiService:
         """
         
         try:
-            # Use Flash model for speed/data generation
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"Gemini Aging Projection Error: {e}")
+            logger.exception("Model call failed")
             return None
 
     async def analyze_dataset_signature(self, headers: list, sample_rows: str):
@@ -340,10 +499,9 @@ class GeminiService:
         }}
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"Universal Analysis Error: {e}")
+            logger.error("Dataset signature analysis error: %s", e)
             # Fallback
             return {
                 "dataset_type": "Unknown",
@@ -369,8 +527,8 @@ class GeminiService:
         
         Headers: {headers}
         Sample Data:
-        {sample_rows}
-        {stats_info}
+        {str(sample_rows)[:10000]}
+        {str(stats_info)[:5000]}
         
         Your task:
         1. Identify ALL meaningful numeric columns that could be plotted
@@ -429,8 +587,7 @@ class GeminiService:
         }}
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            result = self._extract_json(response.text)
+            result = await self._llm_json_async(prompt)
             if result:
                 # Ensure recommended_plots exists
                 if 'recommended_plots' not in result:
@@ -438,7 +595,7 @@ class GeminiService:
                 return result
             return {"error": "Could not parse response", "recommended_plots": []}
         except Exception as e:
-            print(f"Plot Suggestion Error: {e}")
+            logger.error("Plot suggestion error: %s", e)
             # Fallback: Create basic recommendations from headers
             numeric_cols = [h for h in headers if not any(x in h.lower() for x in ['id', 'name', 'date', 'string'])]
             time_cols = [h for h in headers if any(x in h.lower() for x in ['time', 'timestamp', 'date', 'seconds', 't'])]
@@ -458,7 +615,7 @@ class GeminiService:
                         "priority": 1
                     }
                 ],
-                "insights": ["Fallback mode - Gemini analysis failed"]
+                "insights": ["Fallback mode - AI analysis failed"]
             }
             
     async def map_eis_columns(self, headers: list, sample_rows: str):
@@ -482,10 +639,9 @@ class GeminiService:
         If you cannot find a column, omit the key.
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"EIS Mapping Error: {e}")
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def map_columns_semantic(self, headers: list, sample_rows: str):
@@ -518,10 +674,9 @@ class GeminiService:
         4. Do not fail if you are 80% sure. We prefer a likely match over no match.
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"Mapping Error: {e}")
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def analyze_telemetry_deep_dive(self, telemetry_summary: str):
@@ -549,12 +704,9 @@ class GeminiService:
         }}
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"Deep Dive Error: {e}")
-            return None
-
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def analyze_eis_spectrum(self, frequency, z_real, z_imag):
@@ -600,16 +752,16 @@ class GeminiService:
         }}
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"EIS Analysis Error: {e}")
+            logger.exception("Model call failed")
             return None
 
     def tool_search_knowledge_base(self, query: str):
         """Searches the internal battery manuals and document knowledge base for answers."""
+        import asyncio
         from services.rag_service import rag_service
-        results = rag_service.search(query)
+        results = asyncio.run(rag_service.search(query))
         return str(results)
 
     def tool_simulate_charging_analysis(self):
@@ -627,9 +779,12 @@ class GeminiService:
         Example: "Simulation Complete. Anomaly detected: Lithium Plating signatures found at 45% SOC. Recommendation: High risk, reduce C-rate."
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return response.text.strip()
-        except:
+            response_text = model_client.generate(
+                self._build_prompt(prompt, enforce_json=False), task="text"
+            )
+            return response_text.strip()
+        except Exception as e:
+            logger.error("Simulation generation failed: %s", e)
             return "Simulation failed to generate report."
 
     def tool_predict_battery_life(self):
@@ -639,8 +794,8 @@ class GeminiService:
         last_soh = data['soh'][-1]
         return f"Current Cycle: 800. Current SOH: {last_soh:.2f}%. Trend shows accelerated degradation (Knee Point) starting at cycle 600."
 
-    def tool_parse_logs(self, log_content: str):
-        """Analyzes technical error logs or fault codes to provide diagnostic steps."""
+    def tool_parse_logs(self, log_content: str = ""):
+        """Parses raw BMS logs directly into structured JSON errors."""
         # We can re-use the flash model directly or just prompt the agent.
         # Since the Agent IS the model, we can just return the log content with a wrapper
         # telling the agent to "Analyze this".
@@ -682,10 +837,9 @@ class GeminiService:
         }}
         """
         try:
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
-            print(f"Commander Report Error: {e}")
+            logger.exception("Model call failed")
             return {
                 "risk_level": "UNKNOWN",
                 "tactical_commands": ["Manual Inspection Required"],
@@ -698,6 +852,7 @@ class GeminiService:
         DEPRECATED: Now handled by Physics Engine (fleet_service.py).
         Kept for fallback or legacy tests.
         """
+        raise NotImplementedError("Handled by fleet_service")
 
     def tool_simulate_fleet(self, scenario: str):
         """Simulates a specific scenario on the battery fleet (e.g., 'heat wave', 'overcharge event'). Update the Fleet Monitor."""
@@ -713,20 +868,12 @@ class GeminiService:
         from services.fleet_service import fleet_service
         
         try:
-            # Check if there is a running loop
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = None
-
-            if loop and loop.is_running():
-                # We are in an async loop (FastAPI). 
-                # We can't block. We should create a task.
-                task = loop.create_task(fleet_service.update_simulation(scenario))
-                return f"Simulation initiated for scenario: '{scenario}'. Visuals updating shortly."
-            else:
-                asyncio.run(fleet_service.update_simulation(scenario))
-                return f"Simulation applied: '{scenario}'."
+            loop = asyncio.get_running_loop()
+            loop.create_task(fleet_service.update_simulation(scenario))
+            return f"Simulation initiated for scenario: '{scenario}'. Visuals updating shortly."
+        except RuntimeError:
+            asyncio.run(fleet_service.update_simulation(scenario))
+            return f"Simulation applied: '{scenario}'."
         except Exception as e:
              import traceback
              with open("error_log.txt", "a") as f:
@@ -734,16 +881,12 @@ class GeminiService:
              return f"Simulation failed: {str(e)}"
 
     def get_agent_chat(self, history=None, context=None):
-        """Returns a chat session with tools enabled."""
-        tools = [
-            self.tool_search_knowledge_base,
-            self.tool_simulate_charging_analysis,
-            self.tool_predict_battery_life,
-            self.tool_parse_logs,
-            self.tool_create_incident_report,
-            self.tool_simulate_fleet
-        ]
+        """Returns a simple chat interface using model_client.
         
+        Previously created a genai.GenerativeModel with tools.
+        Now replaced with a simpler wrapper that uses model_client.
+        Tools are still available through the ADK agent system.
+        """
         # Dynamic System Instruction with Context
         context_block = ""
         if context:
@@ -757,16 +900,10 @@ class GeminiService:
                 Use this state to answer questions like "What is the current error?" or "Is the battery healthy?".
                 """
             except Exception as e:
-                print(f"Context Serialization Error: {e}")
-                # Continue without context if it fails, to prevent crash
+                logger.error("Context serialization error: %s", e)
                 context_block = "\n(Context could not be loaded due to data format error.)"
         
-        # Use Gemini 3 Flash Preview for the agent
-        # Ensure context_block is a string, even if sanitized
-        agent_model = genai.GenerativeModel(
-            'models/gemini-3-flash-preview',
-            tools=tools,
-            system_instruction=f"""
+        system_instruction = f"""
             You are 'BatteryForge AI', an intelligent battery technician agent.
             You have access to tools to Search Manuals, Simulate Charging, Predict Aging, and Log Incidents.
             
@@ -782,27 +919,35 @@ class GeminiService:
             - **Visual capabilities**: You can analyze images AND live video!
               - If the user has a video stream or wants real-time checks, direct them to [VIEW: VISUAL] and mention the "Live Scout" tab.
               - "Visual Scout" supports Webcam and Screen Sharing for thermal runaway detection.
-            - **Context Awareness**: You can see what the user is doing (Visual Inspection, Logs). Use that context!
-            - If the user asks to "log this" or "create a report", use `create_incident_report` using the data from the context.
+            - Context Awareness: You can see what the user is doing (Visual Inspection, Logs). Use that context!
             - ALWAYS check your tools before saying "I don't know".
+              To call a tool, respond EXACTLY with: [TOOL_CALL: tool_name("arg1", "arg2")]
+              Available tools:
+              - search_knowledge_base(query)
+              - simulate_charging_analysis()
+              - predict_battery_life()
+              - parse_logs()
+              - create_incident_report()
+              - simulate_fleet(scenario)
+            - If the user asks to "log this" or "create a report", use `create_incident_report` using the data from the context.
             - If asked about error codes or safety, use `search_knowledge_base`.
             - If asked to "check the charging curve" or "simulate charging", use `simulate_charging_analysis`.
             - If asked about "battery life" or "how long it will last", use `predict_battery_life`.
             - Be concise and helpful.
             {context_block}
             """
-        )
         
-        return agent_model.start_chat(history=history, enable_automatic_function_calling=True)
+        # Return a lightweight chat wrapper that uses model_client
+        return _ModelClientChat(system_instruction, self, history)
 
 
     # ==========================================
-    # FEATURE 1: BMS Design & Engineering (Gemini 3 Deep Think)
+    # FEATURE 1: BMS Design & Engineering (BatteryForge AI)
     # ==========================================
 
     async def generate_pcb_design_critique(self, design_specs: str, conversation_history: list = None):
         """
-        BMS Design Review with Gemini 3 Pro.
+        BMS Design Review with BatteryForge AI.
         Analyzes battery management system designs for:
         - Cell balancing topology (passive vs active)
         - Current sensing architecture (high-side vs low-side shunt)
@@ -910,14 +1055,14 @@ class GeminiService:
                 ]
             }}
             """
-            response = self.reasoning_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def explore_design_space(self, grid_state: dict):
         """
-        Reinforcement Learning for PCB Routing (Gemini 3 Pro - Agent Logic).
+        Reinforcement Learning for PCB Routing (BatteryForge AI - Agent Logic).
         Simulates an RL agent predicting the optimal next step for a trace on a grid.
         
         Input:
@@ -951,14 +1096,14 @@ class GeminiService:
                 "reasoning": "Avoids obstacle at [2,2], moves towards target [9,9]. Heuristic distance decreases."
             }}
             """
-            response = self.reasoning_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def parse_component_datasheet(self, file_content, mime_type="application/pdf", design_constraints: dict = None):
         """
-        Intelligent Datasheet Parsing & Component Selection (Gemini 3 Pro - Multimodal).
+        Intelligent Datasheet Parsing & Component Selection (BatteryForge AI - Multimodal).
         Parses component datasheets (PDF/Image) to extract electrical specs for BOM validation.
         Optionally cross-references against design constraints.
         """
@@ -980,7 +1125,7 @@ class GeminiService:
             """
 
             prompt = f"""
-            Act as a Senior PCB Component Engineer (Gemini 3 Pro).
+            Act as a Senior PCB Component Engineer (BatteryForge AI).
             Analyze this component datasheet (PDF/Image).
 
             Task:
@@ -1022,28 +1167,28 @@ class GeminiService:
             }}
             """
 
-            # Gemini 3 Pro Multimodal Input
-            response = await self.reasoning_model.generate_content_async([
-                prompt,
-                {"mime_type": mime_type, "data": file_content}
-            ])
-            return self._extract_json(response.text)
+            # Multimodal input: encode file content as base64
+            file_b64 = base64.b64encode(file_content).decode("utf-8")
+            response_text = await model_client.generate_async(
+                self._build_prompt(prompt), image_b64=file_b64, task="vision"
+            )
+            return self._extract_json(response_text)
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     # ==========================================
-    # FEATURE 2: Intelligent Quality Control (Gemini 3 Pro)
+    # FEATURE 2: Intelligent Quality Control (BatteryForge AI)
     # ==========================================
 
     async def analyze_production_defect(self, image_data, mime_type="image/jpeg", reference_image_data=None):
         """
-        AI-Powered Defect Classification (Gemini 3 Pro - Vision).
+        AI-Powered Defect Classification (BatteryForge AI - Vision).
         Distinguishes between harmless cosmetic variations and fatal functional defects.
         Optionally uses a 'Golden Sample' reference to filter false positives.
         """
         try:
             comparison_context = ""
-            images = [{"mime_type": mime_type, "data": image_data}]
             
             if reference_image_data:
                 comparison_context = """
@@ -1056,10 +1201,9 @@ class GeminiService:
                 - If a "defect" in the Test Image is also present in the Reference (e.g., a specific silk screen mark), it is NOT a defect.
                 - Only flag deviations.
                 """
-                images.append({"mime_type": mime_type, "data": reference_image_data})
 
             prompt = f"""
-            Act as a Senior SMT Vision Inspector (Gemini 3 Pro).
+            Act as a Senior SMT Vision Inspector (BatteryForge AI).
             Analyze this high-resolution manufacturing image of a PCB or electronic assembly.
             {comparison_context}
             
@@ -1085,17 +1229,16 @@ class GeminiService:
             }}
             """
             
-            # Prepend prompt to images list
-            content = [prompt] + images
-
-            response = await self.vision_model.generate_content_async(content)
-            return self._extract_json(response.text)
+            # Encode primary image as base64
+            image_b64 = base64.b64encode(image_data).decode("utf-8")
+            return await self._llm_json_async(prompt, image_b64=image_b64, task="vision")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def analyze_xray_inspection(self, image_data, mime_type="image/jpeg"):
         """
-        X-Ray Analysis for Multilayer inspection (Gemini 3 Pro).
+        X-Ray Analysis for Multilayer inspection (BatteryForge AI).
         Detects hidden defects like BGA voids, barrel distortion, misalignment.
         """
         try:
@@ -1125,12 +1268,10 @@ class GeminiService:
                 "anomalies": ["Minor voiding on Ball A5 (within IPC limits)"]
             }
             """
-            response = await self.vision_model.generate_content_async([
-                prompt,
-                {"mime_type": mime_type, "data": image_data}
-            ])
-            return self._extract_json(response.text)
+            image_b64 = base64.b64encode(image_data).decode("utf-8")
+            return await self._llm_json_async(prompt, image_b64=image_b64, task="vision")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def inspect_battery_assembly(self, image_data, mime_type="image/jpeg", inspection_type="general"):
@@ -1286,21 +1427,19 @@ class GeminiService:
 
             prompt = prompts.get(inspection_type, prompts["general"])
 
-            response = await self.vision_model.generate_content_async([
-                prompt,
-                {"mime_type": mime_type, "data": image_data}
-            ])
-            return self._extract_json(response.text)
+            image_b64 = base64.b64encode(image_data).decode("utf-8")
+            return await self._llm_json_async(prompt, image_b64=image_b64, task="vision")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     # ==========================================
-    # FEATURE 3: Predictive Maintenance (Gemini 3 Flash)
+    # FEATURE 3: Predictive Maintenance (BatteryForge AI)
     # ==========================================
 
     async def analyze_maintenance_signals(self, sensor_payload: dict):
         """
-        Vibration & Sound Anomaly Detection (Gemini 3 Flash).
+        Vibration & Sound Anomaly Detection (BatteryForge AI).
         Classifies equipment state based on FFT frequency peaks or time-domain stats.
         Input: { "machine_id": "Drill-01", "fft_peaks": [{"freq": 1200, "amp": 0.5}], "rms_vibration": 1.2 }
         """
@@ -1326,14 +1465,14 @@ class GeminiService:
                 "signatures_detected": ["1.2kHz harmonic peak"]
             }}
             """
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def predict_tool_life(self, tool_logs: dict):
         """
-        Predictive Tool Replacement Scheduling (Gemini 3 Flash).
+        Predictive Tool Replacement Scheduling (BatteryForge AI).
         Forecasts probability of breakage.
         Input: { "hits": 5000, "resin_smear_level": "medium", "feed_rate_deviation": 0.05 }
         """
@@ -1354,14 +1493,14 @@ class GeminiService:
                 "reason": "Resin smear indicates thermal degradation."
             }}
             """
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def analyze_thermal_health(self, thermal_data: dict):
         """
-        AI-Powered Thermal Analysis for CNC Spindle/Motor Health (Gemini 3 Flash).
+        AI-Powered Thermal Analysis for CNC Spindle/Motor Health (BatteryForge AI).
         Analyzes temperature patterns to predict bearing failures and recommend actions.
         Input: { "machine_id": "CNC-DRILL-01", "spindle_temp_c": 72, "ambient_temp_c": 25, "load_percent": 85 }
         """
@@ -1403,9 +1542,9 @@ class GeminiService:
                 "confidence": 0.82
             }}
             """
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     # ==========================================
@@ -1474,9 +1613,9 @@ class GeminiService:
                 "warnings": ["Avoid formation above 35°C - leads to porous SEI with poor cycling stability"]
             }}
             """
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def optimize_tab_welding(self, material: str, thickness_mm: float, weld_type: str):
@@ -1532,18 +1671,18 @@ class GeminiService:
                 "process_window": "Power ±5%, Time ±10% for consistent results"
             }}
             """
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     # ==========================================
-    # FEATURE 4: Supply Chain Resilience (Gemini 3 Pro)
+    # FEATURE 4: Supply Chain Resilience (BatteryForge AI)
     # ==========================================
 
     async def monitor_supply_risk(self, components: list):
         """
-        Dynamic BOM Optimization & Risk Sensing (Gemini 3 Pro).
+        Dynamic BOM Optimization & Risk Sensing (BatteryForge AI).
         Analyzes BOM for geopolitical risks/obsolescence.
         """
         try:
@@ -1565,14 +1704,14 @@ class GeminiService:
                 ]
             }}
             """
-            response = self.vision_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     async def forecast_inventory(self, usage_data: dict):
         """
-        Material Inventory Forecasting (Gemini 3 Flash).
+        Material Inventory Forecasting (BatteryForge AI).
         Predicts shortages of critical raw materials (laminates, copper).
         Input: { "material": "Copper Foil 1oz", "usage_rate_per_day": 50, "lead_time_days": 14, "market_trend": "Shortage" }
         """
@@ -1593,24 +1732,24 @@ class GeminiService:
                 "urgency": "HIGH - Market Shortage Impact"
             }}
             """
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
     # ==========================================
-    # FEATURE 5: Smart Process Control (Gemini 3 Flash)
+    # FEATURE 5: Smart Process Control (BatteryForge AI)
     # ==========================================
 
     async def analyze_process_control_loop(self, sensor_readings: dict):
         """
-        Adaptive Etching and Lamination Control (Gemini 3 Flash).
+        Adaptive Etching and Lamination Control (BatteryForge AI).
         Real-time Closed-Loop Feedback.
         Input: { "process": "Etching", "ph_level": 3.2, "copper_thickness_removed": 15um, "target": 18um }
         """
         try:
             prompt = f"""
-            Act as a Process Control System (Gemini 3 Flash).
+            Act as a Process Control System (BatteryForge AI).
             Analyze real-time sensor feedback and recommend PLC parameter adjustments.
             
             Data: {json.dumps(sensor_readings)}
@@ -1630,9 +1769,9 @@ class GeminiService:
                 "safety_lock": false
             }}
             """
-            response = self.flash_model.generate_content(prompt)
-            return self._extract_json(response.text)
+            return await self._llm_json_async(prompt, task="text")
         except Exception as e:
+            logger.exception("Model call failed")
             return {"error": str(e)}
 
 gemini_service = GeminiService()

@@ -5,6 +5,7 @@ import os
 
 from api.routes import router as api_router
 from api.pcb_routes import router as pcb_router
+from services.model_client import model_client
 
 load_dotenv()
 
@@ -20,6 +21,10 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api")
 app.include_router(pcb_router, prefix="/api")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await model_client.close()
 
 @app.get("/")
 async def root():
