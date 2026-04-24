@@ -28,6 +28,13 @@ function DisclaimerModal({ onAccept }) {
     }
   };
 
+  const handleAccept = () => {
+    // Save acceptance to localStorage and hide modal
+    localStorage.setItem('disclaimerAccepted', 'true');
+    setShow(false);
+    onAccept && onAccept();
+  };
+
   if (!show) return null;
 
   return (
