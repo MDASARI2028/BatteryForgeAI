@@ -4,6 +4,7 @@ import LogParser from './components/LogParser';
 import AnalysisResult from './components/AnalysisResult';
 import ChatInterface from './components/ChatInterface';
 import ChargingAnalysis from './components/ChargingAnalysis';
+import DisclaimerModal from './components/DisclaimerModal';
 import { WorkspaceProvider } from './context/WorkspaceContext';
 
 // import FleetMonitor from './components/FleetMonitor';
@@ -22,6 +23,7 @@ function App() {
     const [isAgentOpen, setIsAgentOpen] = useState(false); // UI State for Layout Occlusion Fix
     const [agentTraces, setAgentTraces] = useState([]); // Real-time agent trace data
     const [isAgentActive, setIsAgentActive] = useState(false); // Agent processing indicator
+    const [disclaimerAccepted, setDisclaimerAccepted] = useState(false); // Disclaimer acceptance
 
     // Phase 1: Fleet Data Bridge - Live fleet data from FleetMonitor
     const [liveFleetData, setLiveFleetData] = useState(null);
@@ -86,6 +88,9 @@ function App() {
 
     return (
         <div className="h-screen bg-slate-950 text-slate-200 overflow-hidden flex flex-col font-sans selection:bg-indigo-500/30 relative">
+
+            {/* DISCLAIMER MODAL - Shows on first load */}
+            <DisclaimerModal onAccept={() => setDisclaimerAccepted(true)} />
 
             {/* RED ALERT OVERLAY */}
             {alertLevel === 'critical' && (

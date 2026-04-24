@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactPlayer from 'react-player';
 import { FaCamera, FaUpload, FaPlay, FaStop, FaExclamationTriangle, FaCheckCircle, FaRobot, FaMicrochip, FaYoutube, FaLink, FaDesktop } from 'react-icons/fa';
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 const VisualScout = () => {
     const [stream, setStream] = useState(null); // For Webcam

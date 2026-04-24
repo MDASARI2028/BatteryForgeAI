@@ -193,7 +193,7 @@ const HomePage = ({ onNavigate }) => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/fleet/data');
+                const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/fleet/data`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.data && data.data.fleet_metrics) {
@@ -216,7 +216,7 @@ const HomePage = ({ onNavigate }) => {
 
     // WebSocket live logs
     useEffect(() => {
-        const ws = new WebSocket('ws://localhost:8000/api/ws/logs');
+        const ws = new WebSocket(`${import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000'}/api/ws/logs`);
         ws.onopen = () => {
             setWsStatus("Connected");
             setLogs(prev => [`[SYS] Connected to Live Telemetry`, ...prev]);

@@ -67,7 +67,7 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/fleet/data');
+                const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/fleet/data`);
                 if (res.ok) {
                     const jsonData = await res.json();
                     setFleetData(jsonData);
@@ -115,7 +115,7 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
     const handleScenario = async (scenario) => {
         setSimulating(true);
         try {
-            await fetch('http://localhost:8000/api/fleet/simulate', {
+            await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/api/fleet/simulate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ scenario })
