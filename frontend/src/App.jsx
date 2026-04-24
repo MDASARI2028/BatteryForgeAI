@@ -87,41 +87,43 @@ function App() {
     };
 
     return (
-        <div className="h-screen bg-gray-50 text-gray-900 overflow-hidden flex flex-col font-sans relative">
+        <div className="h-screen bg-slate-950 text-slate-200 overflow-hidden flex flex-col font-sans selection:bg-indigo-500/30 relative">
 
             {/* DISCLAIMER MODAL - Shows on first load */}
             <DisclaimerModal onAccept={() => setDisclaimerAccepted(true)} />
 
             {/* RED ALERT OVERLAY */}
             {alertLevel === 'critical' && (
-                <div className="fixed inset-0 z-50 pointer-events-none">
-                    <div className="absolute inset-0 bg-red-500/10"></div>
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold text-lg px-6 py-3 rounded-lg shadow-lg border border-red-500">
-                        ⚠️ CRITICAL ALERT ⚠️
+                <div className="fixed inset-0 z-50 pointer-events-none animate-pulse">
+                    <div className="absolute inset-0 bg-red-500/20 mix-blend-overlay"></div>
+                    <div className="absolute inset-0 border-[20px] border-red-500/50 box-border"></div>
+                    <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-3xl px-8 py-4 rounded-b-xl shadow-[0_0_50px_rgba(220,38,38,0.8)] border border-red-400">
+                        ⚠️ CORE STABILITY CRITICAL ⚠️
                     </div>
                 </div>
             )}
 
-            {/* Clean Header */}
-            <header className={`h-14 border-b border-gray-200 bg-white flex items-center justify-between px-6 shrink-0 z-20 ${alertLevel === 'critical' ? 'bg-red-50 border-red-200' : ''}`}>
+            {/* Minimal Header - Neutral Cyber Industrial */}
+            <header className={`h-14 border-b transition-colors duration-500 flex items-center justify-between px-6 shrink-0 z-20 ${alertLevel === 'critical' ? 'bg-red-950/90 border-red-500/50' : 'bg-slate-950/80 border-white/5 backdrop-blur-md'}`}>
                 <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-blue-100 rounded-md">
-                        <Cpu className="text-blue-600 w-4 h-4" />
+                    <div className="p-1.5 bg-slate-800 rounded-lg border border-slate-700">
+                        <Cpu className="text-white w-4 h-4" />
                     </div>
-                    <span className="font-bold text-lg text-gray-900">
-                        BatteryForge<span className="text-gray-500 font-normal">AI</span>
+                    <span className="font-bold text-lg tracking-tight text-white/90">
+                        BatteryForge<span className="text-slate-500 font-light">AI</span>
                     </span>
-                    <span className="text-xs uppercase tracking-wide text-green-600 font-medium ml-2 px-2 py-0.5 bg-green-100 rounded">
+                    <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold ml-2 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
                         Online
                     </span>
                 </div>
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-md">
-                    <button onClick={() => setActiveWorkspace('home')} className={`p-1.5 rounded transition-colors ${activeWorkspace === 'home' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`} title="Home"><Home className="w-4 h-4" /></button>
-                    <button onClick={() => setActiveWorkspace('visual')} className={`p-1.5 rounded transition-colors ${activeWorkspace === 'visual' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`} title="Visual Intelligence"><Microscope className="w-4 h-4" /></button>
-                    <button onClick={() => setActiveWorkspace('logs')} className={`p-1.5 rounded transition-colors ${activeWorkspace === 'logs' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`} title="Logs"><Terminal className="w-4 h-4" /></button>
-                    <button onClick={() => setActiveWorkspace('sim')} className={`p-1.5 rounded transition-colors ${activeWorkspace === 'sim' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`} title="Simulations"><Activity className="w-4 h-4" /></button>
-                    <button onClick={() => setActiveWorkspace('fleet')} className={`p-1.5 rounded transition-colors ${activeWorkspace === 'fleet' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`} title="Fleet Monitor"><Monitor className="w-4 h-4" /></button>
-                    <button onClick={() => setActiveWorkspace('pcb')} className={`p-1.5 rounded transition-colors ${activeWorkspace === 'pcb' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`} title="PCB Factory"><Layers className="w-4 h-4" /></button>
+                <div className="flex gap-1 bg-slate-900/50 p-1 rounded-lg border border-white/5">
+                    {/* Manual Overrides / Context Switchers */}
+                    <button onClick={() => setActiveWorkspace('home')} className={`p-1.5 rounded-md transition-all ${activeWorkspace === 'home' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`} title="Home"><Home className="w-4 h-4" /></button>
+                    <button onClick={() => setActiveWorkspace('visual')} className={`p-1.5 rounded-md transition-all ${activeWorkspace === 'visual' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`} title="Visual Intelligence"><Microscope className="w-4 h-4" /></button>
+                    <button onClick={() => setActiveWorkspace('logs')} className={`p-1.5 rounded-md transition-all ${activeWorkspace === 'logs' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`} title="Logs"><Terminal className="w-4 h-4" /></button>
+                    <button onClick={() => setActiveWorkspace('sim')} className={`p-1.5 rounded-md transition-all ${activeWorkspace === 'sim' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`} title="Simulations"><Activity className="w-4 h-4" /></button>
+                    <button onClick={() => setActiveWorkspace('fleet')} className={`p-1.5 rounded-md transition-all ${activeWorkspace === 'fleet' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`} title="Fleet Monitor"><Monitor className="w-4 h-4" /></button>
+                    <button onClick={() => setActiveWorkspace('pcb')} className={`p-1.5 rounded-md transition-all ${activeWorkspace === 'pcb' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`} title="PCB Factory"><Layers className="w-4 h-4" /></button>
                 </div>
             </header>
 
@@ -147,9 +149,12 @@ function App() {
                 {/* MAIN WORKSPACE */}
                 {/* Dynamically adjust margin when agent is open to prevent occlusion */}
                 <main
-                    className={`flex-1 bg-gray-50 p-6 overflow-y-auto relative transition-all duration-300 ease-in-out ${isAgentOpen ? 'mr-[460px]' : 'mr-0'}`}
+                    className={`flex-1 bg-gradient-to-br from-slate-950 to-slate-900 p-6 overflow-y-auto relative transition-all duration-300 ease-in-out ${isAgentOpen ? 'mr-[460px]' : 'mr-0'}`}
                 >
-                    <div className="max-w-7xl mx-auto h-full flex flex-col relative">
+                    {/* Subtle grid pattern for industrial feel */}
+                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
+
+                    <div className="max-w-7xl mx-auto h-full flex flex-col relative z-0">
 
                         {/* HOME DASHBOARD */}
                         {activeWorkspace === 'home' && (
@@ -161,15 +166,15 @@ function App() {
                         )}
 
                         {activeWorkspace === 'logs' && (
-                            <div className="animate-in fade-in duration-300">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="p-3 bg-blue-100 rounded-lg text-blue-600"><Terminal className="w-6 h-6" /></div>
+                            <div className="animate-in fade-in zoom-in-95 duration-500">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="p-3 bg-slate-800/50 rounded-xl border border-white/10 text-amber-400 shadow-lg"><Terminal className="w-6 h-6" /></div>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">Log Analysis</h2>
-                                        <p className="text-sm text-gray-600">Semantic Parsing of BMS Error Logs</p>
+                                        <h2 className="text-2xl font-bold text-white tracking-tight">Log Analysis</h2>
+                                        <p className="text-sm text-slate-400">Semantic Parsing of BMS Error Logs</p>
                                     </div>
                                 </div>
-                                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                                <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-2xl">
                                     <LogParser onResult={setLogResult} context={agingMetrics} />
                                     <AnalysisResult data={logResult} type="log" />
                                 </div>
@@ -177,28 +182,30 @@ function App() {
                         )}
 
                         {activeWorkspace === 'sim' && (
-                            <div className="animate-in fade-in duration-300 h-full">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="p-3 bg-blue-100 rounded-lg text-blue-600"><Cpu className="w-6 h-6" /></div>
+                            <div className="animate-in fade-in zoom-in-95 duration-500 h-full">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="p-3 bg-slate-800/50 rounded-xl border border-white/10 text-emerald-400 shadow-lg"><Cpu className="w-6 h-6" /></div>
                                     <div>
-                                        <h2 className="text-2xl font-bold text-gray-900">Simulation Laboratory</h2>
-                                        <p className="text-sm text-gray-600">Generative AI & Aging Prediction Models</p>
+                                        <h2 className="text-2xl font-bold text-white tracking-tight">Simulation Laboratory</h2>
+                                        <p className="text-sm text-slate-400">Generative AI & Aging Prediction Models</p>
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-6 pb-10">
+                                <div className="flex flex-col gap-8 pb-10">
                                     <ChargingAnalysis onAnalysisComplete={setAgingMetrics} />
+
                                 </div>
                             </div>
                         )}
 
                         {activeWorkspace === 'fleet' && (
-                            <div className="animate-in fade-in duration-300 h-full flex flex-col">
+                            <div className="animate-in fade-in zoom-in-95 duration-500 h-full flex flex-col">
                                 <div className="flex-1 h-full -m-6">
                                     <FleetApp
                                         onFleetDataUpdate={setLiveFleetData}
                                         onProactiveAlert={handleProactiveAlert}
                                     />
                                 </div>
+
                             </div>
                         )}
 
