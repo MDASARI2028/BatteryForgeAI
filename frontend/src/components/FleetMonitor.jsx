@@ -174,63 +174,65 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
     const chargingCount = Math.floor(fleet_metrics.active_packs * 0.3);
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500 p-1 sm:p-0">
             {/* === HERO STATS BAR === */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Total Fleet Size */}
-                <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 p-5 rounded-2xl border border-slate-700/50 overflow-hidden group hover:border-blue-500/30 transition-all">
+                <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-700/50 overflow-hidden group hover:border-blue-500/30 transition-all">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all"></div>
                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 text-slate-400 text-xs uppercase font-bold tracking-wider mb-2">
-                            <Globe2 className="w-4 h-4" />
+                        <div className="flex items-center gap-2 text-slate-400 text-[10px] sm:text-xs uppercase font-bold tracking-wider mb-1 sm:mb-2">
+                            <Globe2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             Global Fleet
                         </div>
-                        <div className="text-4xl font-black text-white tracking-tight">
+                        <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
                             <AnimatedCounter value={fleet_metrics.active_packs * 10 + 2847} />
                         </div>
-                        <div className="text-slate-500 text-xs mt-1">Active battery packs worldwide</div>
+                        <div className="text-slate-500 text-[10px] sm:text-xs mt-1">Active battery packs worldwide</div>
                     </div>
                 </div>
 
                 {/* Fleet Health - Circular Ring */}
-                <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 p-5 rounded-2xl border border-slate-700/50 overflow-hidden group hover:border-emerald-500/30 transition-all">
+                <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-700/50 overflow-hidden group hover:border-emerald-500/30 transition-all">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all"></div>
-                    <div className="relative z-10 flex items-center gap-4">
-                        <div className="relative">
+                    <div className="relative z-10 flex items-center gap-3 sm:gap-4">
+                        <div className="relative shrink-0">
                             <ProgressRing
                                 value={fleet_metrics.avg_health}
+                                size={60}
+                                strokeWidth={6}
                                 color={fleet_metrics.avg_health > 90 ? '#10b981' : fleet_metrics.avg_health > 70 ? '#eab308' : '#ef4444'}
                             />
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-xl font-bold text-white">{fleet_metrics.avg_health}%</span>
+                                <span className="text-sm sm:text-base font-bold text-white">{fleet_metrics.avg_health}%</span>
                             </div>
                         </div>
-                        <div>
-                            <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-1">Fleet Health</div>
-                            <div className={`text-sm font-semibold ${fleet_metrics.avg_health > 90 ? 'text-emerald-400' : 'text-yellow-400'}`}>
-                                {fleet_metrics.avg_health > 90 ? 'Excellent' : fleet_metrics.avg_health > 70 ? 'Good' : 'Attention Needed'}
+                        <div className="min-w-0">
+                            <div className="text-slate-400 text-[10px] sm:text-xs uppercase font-bold tracking-wider mb-0.5 sm:mb-1">Fleet Health</div>
+                            <div className={`text-xs sm:text-sm font-semibold truncate ${fleet_metrics.avg_health > 90 ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                {fleet_metrics.avg_health > 90 ? 'Excellent' : fleet_metrics.avg_health > 70 ? 'Good' : 'Alert'}
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Active Charging */}
-                <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 p-5 rounded-2xl border border-slate-700/50 overflow-hidden group hover:border-cyan-500/30 transition-all">
+                <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-700/50 overflow-hidden group hover:border-cyan-500/30 transition-all">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-all"></div>
                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 text-slate-400 text-xs uppercase font-bold tracking-wider mb-2">
-                            <BatteryCharging className="w-4 h-4 text-cyan-400 animate-pulse" />
-                            Active Charging
+                        <div className="flex items-center gap-2 text-slate-400 text-[10px] sm:text-xs uppercase font-bold tracking-wider mb-1 sm:mb-2">
+                            <BatteryCharging className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 animate-pulse" />
+                            Charging
                         </div>
-                        <div className="text-4xl font-black text-cyan-400 tracking-tight">
+                        <div className="text-3xl sm:text-4xl font-black text-cyan-400 tracking-tight">
                             <AnimatedCounter value={chargingCount} />
                         </div>
-                        <div className="text-slate-500 text-xs mt-1">Packs currently charging</div>
+                        <div className="text-slate-500 text-[10px] sm:text-xs mt-1">Packs in active charge cycle</div>
                     </div>
                 </div>
 
                 {/* Critical Alerts */}
-                <div className={`relative p-5 rounded-2xl border overflow-hidden group transition-all ${criticalCount > 0
+                <div className={`relative p-4 sm:p-5 rounded-2xl border overflow-hidden group transition-all ${criticalCount > 0
                     ? 'bg-gradient-to-br from-red-950/50 to-slate-900 border-red-500/30 hover:border-red-500/50'
                     : 'bg-gradient-to-br from-slate-900 to-slate-800 border-slate-700/50 hover:border-emerald-500/30'
                     }`}>
@@ -239,14 +241,14 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
                     )}
                     <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl"></div>
                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 text-slate-400 text-xs uppercase font-bold tracking-wider mb-2">
-                            <AlertTriangle className={`w-4 h-4 ${criticalCount > 0 ? 'text-red-400 animate-pulse' : 'text-slate-500'}`} />
-                            Critical Alerts
+                        <div className="flex items-center gap-2 text-slate-400 text-[10px] sm:text-xs uppercase font-bold tracking-wider mb-1 sm:mb-2">
+                            <AlertTriangle className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${criticalCount > 0 ? 'text-red-400 animate-pulse' : 'text-slate-500'}`} />
+                            Critical
                         </div>
-                        <div className={`text-4xl font-black tracking-tight ${criticalCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        <div className={`text-3xl sm:text-4xl font-black tracking-tight ${criticalCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                             <AnimatedCounter value={criticalCount} />
                         </div>
-                        <div className="text-slate-500 text-xs mt-1">
+                        <div className="text-slate-500 text-[10px] sm:text-xs mt-1">
                             {criticalCount > 0 ? 'Require immediate attention' : 'All systems nominal'}
                         </div>
                     </div>
@@ -260,92 +262,98 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
                     {/* SOC Distribution & Thermal Side by Side */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* SOC Distribution */}
-                        <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 shadow-xl">
+                        <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-4 sm:p-5 shadow-xl">
                             <h4 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
                                 <Battery className="w-4 h-4 text-emerald-400" />
                                 SOC Distribution
                             </h4>
-                            <ResponsiveContainer width="100%" height={180}>
-                                <BarChart data={socDistribution} margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                    <XAxis dataKey="range" stroke="#64748b" fontSize={10} tickLine={false} />
-                                    <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
-                                        cursor={{ fill: 'rgba(100, 116, 139, 0.1)' }}
-                                    />
-                                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                                        {socDistribution.map((entry, index) => (
-                                            <Cell key={index} fill={entry.color} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                            <div className="h-[180px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={socDistribution} margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                                        <XAxis dataKey="range" stroke="#64748b" fontSize={10} tickLine={false} />
+                                        <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                                            cursor={{ fill: 'rgba(100, 116, 139, 0.1)' }}
+                                        />
+                                        <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                                            {socDistribution.map((entry, index) => (
+                                                <Cell key={index} fill={entry.color} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
 
                         {/* Thermal Spread */}
-                        <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 shadow-xl">
+                        <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-4 sm:p-5 shadow-xl">
                             <h4 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
                                 <Thermometer className="w-4 h-4 text-red-400" />
                                 Thermal Spread
-                                <span className={`ml-auto text-xs px-2 py-0.5 rounded ${fleet_metrics.thermal_spread < 10 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
+                                <span className={`ml-auto text-[10px] px-2 py-0.5 rounded font-bold ${fleet_metrics.thermal_spread < 10 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
                                     }`}>
                                     Δ {fleet_metrics.thermal_spread}°C
                                 </span>
                             </h4>
-                            <ResponsiveContainer width="100%" height={180}>
-                                <AreaChart data={timeline}>
-                                    <defs>
-                                        <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
-                                            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                    <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickLine={false} />
-                                    <YAxis domain={['dataMin - 5', 'dataMax + 5']} stroke="#64748b" fontSize={10} tickLine={false} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }} />
-                                    <Line type="monotone" dataKey="temp_max" stroke="#ef4444" strokeWidth={1} strokeDasharray="3 3" dot={false} />
-                                    <Line type="monotone" dataKey="temp_min" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
-                                    <Area type="monotone" dataKey="temp_avg" stroke="#f97316" strokeWidth={2} fill="url(#tempGradient)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            <div className="h-[180px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={timeline}>
+                                        <defs>
+                                            <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                                        <XAxis dataKey="time" stroke="#64748b" fontSize={10} tickLine={false} />
+                                        <YAxis domain={['dataMin - 5', 'dataMax + 5']} stroke="#64748b" fontSize={10} tickLine={false} />
+                                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }} />
+                                        <Line type="monotone" dataKey="temp_max" stroke="#ef4444" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                                        <Line type="monotone" dataKey="temp_min" stroke="#3b82f6" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                                        <Area type="monotone" dataKey="temp_avg" stroke="#f97316" strokeWidth={2} fill="url(#tempGradient)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     </div>
 
                     {/* Health Degradation Trend - Full Width */}
-                    <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 shadow-xl">
-                        <div className="flex items-center justify-between mb-4">
+                    <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-4 sm:p-5 shadow-xl">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
                             <h4 className="text-sm font-semibold text-slate-200 flex items-center gap-2">
                                 <TrendingDown className="w-4 h-4 text-amber-400" />
-                                Fleet Health Trend (12-Month)
+                                Health Trend (12-Month)
                             </h4>
-                            <div className="flex items-center gap-4 text-xs">
+                            <div className="flex items-center gap-4 text-[10px]">
                                 <span className="flex items-center gap-1"><div className="w-2 h-2 bg-emerald-400 rounded-full"></div> Actual</span>
                                 <span className="flex items-center gap-1"><div className="w-2 h-2 bg-amber-400 rounded-full opacity-50"></div> Predicted</span>
                             </div>
                         </div>
-                        <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={healthTrend}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                                <XAxis dataKey="month" stroke="#64748b" fontSize={10} tickLine={false} />
-                                <YAxis domain={[60, 100]} stroke="#64748b" fontSize={10} tickLine={false} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }} />
-                                <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', strokeWidth: 0 }} />
-                                <Line type="monotone" dataKey="predicted" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                        <div className="h-[200px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={healthTrend}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                                    <XAxis dataKey="month" stroke="#64748b" fontSize={10} tickLine={false} />
+                                    <YAxis domain={[60, 100]} stroke="#64748b" fontSize={10} tickLine={false} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }} />
+                                    <Line type="monotone" dataKey="actual" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', strokeWidth: 0 }} />
+                                    <Line type="monotone" dataKey="predicted" stroke="#f59e0b" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
 
                     {/* Red List Table */}
-                    <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 shadow-xl">
+                    <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-4 sm:p-5 shadow-xl">
                         <h4 className="text-sm font-semibold text-red-400 mb-4 flex items-center gap-2">
                             <ShieldAlert className="w-4 h-4" />
                             Critical Outliers ({red_list.length})
                         </h4>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm text-slate-300">
-                                <thead className="text-xs uppercase bg-slate-950/50 text-slate-500 border-b border-slate-800">
+                        <div className="overflow-x-auto -mx-4 sm:mx-0">
+                            <table className="w-full text-left text-xs sm:text-sm text-slate-300 min-w-[500px] sm:min-w-0">
+                                <thead className="text-[10px] sm:text-xs uppercase bg-slate-950/50 text-slate-500 border-b border-slate-800">
                                     <tr>
                                         <th className="px-4 py-3">Pack ID</th>
                                         <th className="px-4 py-3">Status</th>
@@ -359,14 +367,14 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
                                         <tr key={pack.pack_id} className="hover:bg-slate-800/50 transition-colors cursor-pointer group">
                                             <td className="px-4 py-3 font-mono text-white">{pack.pack_id}</td>
                                             <td className="px-4 py-3">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${pack.status === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                                <span className={`px-2 py-0.5 rounded text-[9px] sm:text-[10px] font-bold ${pack.status === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
                                                     pack.status === 'WARNING' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
                                                         'bg-slate-700 text-slate-300'
                                                     }`}>
                                                     {pack.status}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-slate-400">{pack.fault}</td>
+                                            <td className="px-4 py-3 text-slate-400 truncate max-w-[120px]">{pack.fault}</td>
                                             <td className="px-4 py-3 text-right font-mono text-red-300">{pack.temp}°C</td>
                                             <td className="px-4 py-3 text-right font-mono text-yellow-500">{pack.soh}%</td>
                                         </tr>
@@ -386,12 +394,12 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
                                 <Radio className="w-4 h-4 text-blue-400" />
                                 Live Feed
                             </h4>
-                            <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1">
+                            <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full animate-pulse flex items-center gap-1 font-bold">
                                 <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
                                 LIVE
                             </span>
                         </div>
-                        <div className="max-h-[280px] overflow-y-auto">
+                        <div className="max-h-[240px] sm:max-h-[280px] overflow-y-auto">
                             {liveAlerts.map((alert) => (
                                 <div
                                     key={alert.id}
@@ -403,10 +411,10 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
                                         }`}></div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs font-mono text-slate-400">{alert.pack}</span>
-                                            <span className="text-[10px] text-slate-600">{alert.time}</span>
+                                            <span className="text-[10px] font-mono text-slate-400">{alert.pack}</span>
+                                            <span className="text-[9px] text-slate-600">{alert.time}</span>
                                         </div>
-                                        <p className={`text-xs mt-0.5 ${alert.type === 'critical' ? 'text-red-300' :
+                                        <p className={`text-[11px] sm:text-xs mt-0.5 ${alert.type === 'critical' ? 'text-red-300' :
                                             alert.type === 'warning' ? 'text-yellow-300' : 'text-slate-400'
                                             }`}>
                                             {alert.message}
@@ -424,12 +432,12 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
                             <h4 className="text-sm font-bold text-indigo-300 flex items-center gap-2">
                                 <Cpu className="w-4 h-4" /> AI Commander
                             </h4>
-                            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded animate-pulse">ACTIVE</span>
+                            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded animate-pulse font-bold">ACTIVE</span>
                         </div>
 
                         {report ? (
                             <div className="p-4 space-y-4">
-                                <div className={`p-3 rounded-lg border text-xs font-bold text-center ${report.risk_level === 'HIGH' ? 'bg-red-500/10 border-red-500/30 text-red-300' :
+                                <div className={`p-3 rounded-lg border text-[11px] sm:text-xs font-bold text-center ${report.risk_level === 'HIGH' ? 'bg-red-500/10 border-red-500/30 text-red-300' :
                                     report.risk_level === 'MEDIUM' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300' :
                                         'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                                     }`}>
@@ -438,14 +446,14 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
 
                                 <div>
                                     <h5 className="text-[10px] uppercase text-slate-500 font-bold mb-1">Analysis</h5>
-                                    <p className="text-xs text-slate-300 leading-relaxed italic">"{report.reasoning}"</p>
+                                    <p className="text-[11px] sm:text-xs text-slate-300 leading-relaxed italic">"{report.reasoning}"</p>
                                 </div>
 
                                 <div>
                                     <h5 className="text-[10px] uppercase text-slate-500 font-bold mb-2">Tactical Orders</h5>
                                     <ul className="space-y-1.5">
                                         {report.tactical_commands?.slice(0, 3).map((cmd, i) => (
-                                            <li key={i} className="flex items-start gap-2 text-xs text-indigo-100 bg-indigo-500/10 p-2 rounded-lg">
+                                            <li key={i} className="flex items-start gap-2 text-[11px] sm:text-xs text-indigo-100 bg-indigo-500/10 p-2 rounded-lg">
                                                 <span className="bg-indigo-500/40 text-indigo-200 w-4 h-4 flex items-center justify-center rounded-full text-[9px] mt-0.5 flex-shrink-0">
                                                     {i + 1}
                                                 </span>
@@ -469,30 +477,30 @@ const FleetMonitor = ({ onFleetDataUpdate, onProactiveAlert }) => {
                             <button
                                 onClick={() => handleScenario("normal")}
                                 disabled={simulating}
-                                className="px-3 py-2.5 bg-slate-800 hover:bg-emerald-900/30 text-xs text-white rounded-lg border border-white/5 transition-all disabled:opacity-50 hover:border-emerald-500/30"
+                                className="px-3 py-2.5 bg-slate-800 hover:bg-emerald-900/30 text-[10px] sm:text-xs text-white rounded-lg border border-white/5 transition-all disabled:opacity-50 hover:border-emerald-500/30"
                             >
-                                ✓ Normal Ops
+                                ✓ Normal
                             </button>
                             <button
                                 onClick={() => handleScenario("heatwave")}
                                 disabled={simulating}
-                                className="px-3 py-2.5 bg-slate-800 hover:bg-red-900/30 text-xs text-white rounded-lg border border-white/5 transition-all disabled:opacity-50 hover:border-red-500/30"
+                                className="px-3 py-2.5 bg-slate-800 hover:bg-red-900/30 text-[10px] sm:text-xs text-white rounded-lg border border-white/5 transition-all disabled:opacity-50 hover:border-red-500/30"
                             >
-                                🔥 Heat Wave
+                                🔥 Heat
                             </button>
                             <button
                                 onClick={() => handleScenario("aging")}
                                 disabled={simulating}
-                                className="px-3 py-2.5 bg-slate-800 hover:bg-yellow-900/30 text-xs text-white rounded-lg border border-white/5 transition-all disabled:opacity-50 hover:border-yellow-500/30"
+                                className="px-3 py-2.5 bg-slate-800 hover:bg-yellow-900/30 text-[10px] sm:text-xs text-white rounded-lg border border-white/5 transition-all disabled:opacity-50 hover:border-yellow-500/30"
                             >
                                 ⚡ Aging
                             </button>
                             <button
                                 onClick={() => handleScenario("cold_snap")}
                                 disabled={simulating}
-                                className="px-3 py-2.5 bg-slate-800 hover:bg-blue-900/30 text-xs text-white rounded-lg border border-white/5 transition-all disabled:opacity-50 hover:border-blue-500/30"
+                                className="px-3 py-2.5 bg-slate-800 hover:bg-blue-900/30 text-[10px] sm:text-xs text-white rounded-lg border border-white/5 transition-all disabled:opacity-50 hover:border-blue-500/30"
                             >
-                                ❄️ Cold Snap
+                                ❄️ Cold
                             </button>
                         </div>
                         {simulating && (

@@ -112,7 +112,7 @@ Example:
                 )}
 
                 {/* Action Buttons */}
-                <div className="flex justify-between items-center mt-3">
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 gap-3">
                     <div className="relative">
                         <input
                             type="file"
@@ -125,7 +125,7 @@ Example:
                         <label
                             htmlFor="log-file-upload"
                             className={`
-                                flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border border-dashed border-slate-600
+                                flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all cursor-pointer border border-dashed border-slate-600
                                 ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-800 hover:border-slate-500 text-slate-400 hover:text-white'}
                             `}
                         >
@@ -138,7 +138,7 @@ Example:
                         onClick={handleAnalyze}
                         disabled={loading || !logText.trim()}
                         className={`
-                            flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold transition-all
+                            flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all
                             ${loading || !logText.trim()
                                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
                                 : 'bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white shadow-lg shadow-amber-900/30'}

@@ -447,9 +447,9 @@ const ChatInterface = ({
 
     // Open State
     return (
-        <div className="fixed bottom-6 right-6 w-[450px] h-[650px] flex flex-col bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl z-50 animate-in slide-in-from-bottom-10 fade-in zoom-in-95 backdrop-blur-md">
+        <div className="fixed bottom-0 right-0 md:bottom-6 md:right-6 w-full md:w-[450px] h-full md:h-[650px] flex flex-col bg-slate-900 border-t md:border border-slate-700/50 md:rounded-2xl shadow-2xl z-50 animate-in slide-in-from-bottom-10 fade-in zoom-in-95 backdrop-blur-md">
             {/* Header */}
-            <div className="p-4 border-b border-slate-800 flex justify-between items-center shrink-0 bg-slate-950/50 rounded-t-2xl">
+            <div className="p-4 border-b border-slate-800 flex justify-between items-center shrink-0 bg-slate-950/50 md:rounded-t-2xl">
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2 text-indigo-300">
                         <Sparkles className="w-5 h-5" />
@@ -476,9 +476,9 @@ const ChatInterface = ({
                     )}
                     <button
                         onClick={() => setIsOpen(false)}
-                        className="text-slate-400 hover:text-white transition-colors p-1"
+                        className="text-slate-400 hover:text-white transition-colors p-2"
                     >
-                        ✕
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
             </div>
@@ -530,7 +530,7 @@ const ChatInterface = ({
                     if (msg.role === 'system') {
                         return (
                             <div key={idx} className="flex justify-center">
-                                <div className="bg-slate-800/50 text-slate-400 text-xs px-3 py-1 rounded-full border border-slate-700">
+                                <div className="bg-slate-800/50 text-slate-400 text-[10px] md:text-xs px-3 py-1 rounded-full border border-slate-700 text-center">
                                     {msg.content}
                                 </div>
                             </div>
@@ -549,10 +549,10 @@ const ChatInterface = ({
                                 )}
                             </div>
                             <div className={`max-w-[85%] rounded-2xl p-3 text-sm ${msg.role === 'user'
-                                    ? 'bg-indigo-600 text-white'
-                                    : msg.isActionResult
-                                        ? 'bg-emerald-900/30 text-emerald-200 border border-emerald-700/50'
-                                        : 'bg-slate-800 text-slate-200 border border-slate-700'
+                                ? 'bg-indigo-600 text-white'
+                                : msg.isActionResult
+                                    ? 'bg-emerald-900/30 text-emerald-200 border border-emerald-700/50'
+                                    : 'bg-slate-800 text-slate-200 border border-slate-700'
                                 }`}>
                                 {msg.role === 'user' ? msg.content : formatMessage(msg)}
 
@@ -627,44 +627,38 @@ const ChatInterface = ({
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={
                         activeWorkspace === 'fleet'
-                            ? "Ask about fleet health, critical packs, or run simulations..."
-                            : "Ask about maintenance, codes, or safety..."
+                            ? "Ask about fleet health..."
+                            : "Ask about maintenance..."
                     }
-                    className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 min-w-0"
                 />
 
-                <button
-                    type="button"
-                    onClick={() => setShowKnowledgeBase(!showKnowledgeBase)}
-                    className={`p-2 ${showKnowledgeBase ? 'bg-indigo-600' : 'bg-slate-700 hover:bg-slate-600'} text-white rounded-lg transition-colors border ${showKnowledgeBase ? 'border-indigo-500' : 'border-slate-600'}`}
-                    title="Upload Battery Manuals (PDFs)"
-                >
-                    {showKnowledgeBase ? <Book className="w-5 h-5" /> : <Paperclip className="w-5 h-5" />}
-                </button>
+                <div className="flex gap-1">
+                    <button
+                        type="button"
+                        onClick={() => setShowKnowledgeBase(!showKnowledgeBase)}
+                        className={`p-2 ${showKnowledgeBase ? 'bg-indigo-600' : 'bg-slate-700 hover:bg-slate-600'} text-white rounded-lg transition-colors border ${showKnowledgeBase ? 'border-indigo-500' : 'border-slate-600'}`}
+                        title="Upload Battery Manuals (PDFs)"
+                    >
+                        {showKnowledgeBase ? <Book className="w-4 h-4 md:w-5 md:h-5" /> : <Paperclip className="w-4 h-4 md:w-5 md:h-5" />}
+                    </button>
 
-                <button
-                    type="button"
-                    onClick={() => alert("Voice control active. Try saying 'Run audit'.")}
-                    className="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors border border-slate-600"
-                    title="Voice Command"
-                >
-                    <Mic className="w-5 h-5" />
-                </button>
-
-                <button
-                    type="submit"
-                    disabled={!input.trim() || loading}
-                    className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-indigo-500/20"
-                >
-                    <Send className="w-5 h-5" />
-                </button>
+                    <button
+                        type="submit"
+                        disabled={!input.trim() || loading}
+                        className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-indigo-500/20"
+                    >
+                        <Send className="w-4 h-4 md:w-5 md:h-5" />
+                    </button>
+                </div>
             </form>
 
             {/* Status Bar */}
-            <div className="h-1 bg-slate-800 w-full flex">
+            <div className="h-1 bg-slate-800 w-full flex shrink-0">
                 <div className={`h-full bg-emerald-500 transition-all duration-500 ${loading ? 'w-full animate-pulse' : 'w-0'}`}></div>
             </div>
         </div >
+    );
     );
 };
 

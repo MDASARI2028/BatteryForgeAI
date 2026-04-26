@@ -87,7 +87,7 @@ function App() {
     };
 
     return (
-        <div className="h-screen bg-slate-950 text-slate-200 overflow-hidden flex flex-col font-sans selection:bg-indigo-500/30 relative">
+        <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans selection:bg-indigo-500/30 relative">
 
             {/* DISCLAIMER MODAL - Shows on first load */}
             <DisclaimerModal onAccept={() => setDisclaimerAccepted(true)} />
@@ -96,27 +96,27 @@ function App() {
             {alertLevel === 'critical' && (
                 <div className="fixed inset-0 z-50 pointer-events-none animate-pulse">
                     <div className="absolute inset-0 bg-red-500/20 mix-blend-overlay"></div>
-                    <div className="absolute inset-0 border-[20px] border-red-500/50 box-border"></div>
-                    <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-3xl px-8 py-4 rounded-b-xl shadow-[0_0_50px_rgba(220,38,38,0.8)] border border-red-400">
+                    <div className="absolute inset-0 border-[8px] md:border-[20px] border-red-500/50 box-border"></div>
+                    <div className="absolute top-4 md:top-10 left-1/2 -translate-x-1/2 bg-red-600 text-white font-black text-xl md:text-3xl px-4 md:px-8 py-2 md:py-4 rounded-b-xl shadow-[0_0_50px_rgba(220,38,38,0.8)] border border-red-400 whitespace-nowrap">
                         ⚠️ CORE STABILITY CRITICAL ⚠️
                     </div>
                 </div>
             )}
 
             {/* Minimal Header - Neutral Cyber Industrial */}
-            <header className={`h-14 border-b transition-colors duration-500 flex items-center justify-between px-6 shrink-0 z-20 ${alertLevel === 'critical' ? 'bg-red-950/90 border-red-500/50' : 'bg-slate-950/80 border-white/5 backdrop-blur-md'}`}>
-                <div className="flex items-center gap-3">
+            <header className={`h-14 border-b transition-colors duration-500 flex items-center justify-between px-4 md:px-6 shrink-0 z-20 sticky top-0 ${alertLevel === 'critical' ? 'bg-red-950/90 border-red-500/50' : 'bg-slate-950/80 border-white/5 backdrop-blur-md'}`}>
+                <div className="flex items-center gap-2 md:gap-3">
                     <div className="p-1.5 bg-slate-800 rounded-lg border border-slate-700">
-                        <Cpu className="text-white w-4 h-4" />
+                        <Cpu className="text-white w-3 h-3 md:w-4 md:h-4" />
                     </div>
-                    <span className="font-bold text-lg tracking-tight text-white/90">
+                    <span className="font-bold text-base md:text-lg tracking-tight text-white/90">
                         BatteryForge<span className="text-slate-500 font-light">AI</span>
                     </span>
-                    <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-semibold ml-2 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+                    <span className="hidden sm:inline-block text-[10px] uppercase tracking-wider text-emerald-400 font-semibold ml-2 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
                         Online
                     </span>
                 </div>
-                <div className="flex gap-1 bg-slate-900/50 p-1 rounded-lg border border-white/5">
+                <div className="flex gap-1 bg-slate-900/50 p-1 rounded-lg border border-white/5 overflow-x-auto max-w-[200px] sm:max-w-none">
                     {/* Manual Overrides / Context Switchers */}
                     <button onClick={() => setActiveWorkspace('home')} className={`p-1.5 rounded-md transition-all ${activeWorkspace === 'home' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`} title="Home"><Home className="w-4 h-4" /></button>
                     <button onClick={() => setActiveWorkspace('visual')} className={`p-1.5 rounded-md transition-all ${activeWorkspace === 'visual' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'}`} title="Visual Intelligence"><Microscope className="w-4 h-4" /></button>
@@ -149,7 +149,7 @@ function App() {
                 {/* MAIN WORKSPACE */}
                 {/* Dynamically adjust margin when agent is open to prevent occlusion */}
                 <main
-                    className={`flex-1 bg-gradient-to-br from-slate-950 to-slate-900 p-6 overflow-y-auto relative transition-all duration-300 ease-in-out ${isAgentOpen ? 'mr-[460px]' : 'mr-0'}`}
+                    className={`flex-1 bg-gradient-to-br from-slate-950 to-slate-900 p-4 md:p-6 overflow-y-auto relative transition-all duration-300 ease-in-out ${isAgentOpen ? 'lg:mr-[460px]' : 'mr-0'}`}
                 >
                     {/* Subtle grid pattern for industrial feel */}
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
@@ -174,7 +174,7 @@ function App() {
                                         <p className="text-sm text-slate-400">Semantic Parsing of BMS Error Logs</p>
                                     </div>
                                 </div>
-                                <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-6 shadow-2xl">
+                                <div className="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-4 md:p-6 shadow-2xl">
                                     <LogParser onResult={setLogResult} context={agingMetrics} />
                                     <AnalysisResult data={logResult} type="log" />
                                 </div>
@@ -199,7 +199,7 @@ function App() {
 
                         {activeWorkspace === 'fleet' && (
                             <div className="animate-in fade-in zoom-in-95 duration-500 h-full flex flex-col">
-                                <div className="flex-1 h-full -m-6">
+                                <div className="flex-1 h-full -m-4 md:-m-6">
                                     <FleetApp
                                         onFleetDataUpdate={setLiveFleetData}
                                         onProactiveAlert={handleProactiveAlert}

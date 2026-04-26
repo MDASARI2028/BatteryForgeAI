@@ -236,7 +236,7 @@ const HomePage = ({ onNavigate }) => {
     }, []);
 
     return (
-        <div className="relative max-w-7xl mx-auto py-6">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
             {/* Animated background */}
             <AnimatedGrid />
 
@@ -257,12 +257,12 @@ const HomePage = ({ onNavigate }) => {
             `}</style>
 
             {/* ============ HERO SECTION ============ */}
-            <div className="relative mb-12 animate-in fade-in zoom-in-95 duration-700">
-                <div className="flex items-start justify-between">
-                    <div className="max-w-2xl">
+            <div className="relative mb-10 md:mb-16 animate-in fade-in zoom-in-95 duration-700">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
+                    <div className="max-w-3xl">
                         {/* Brand */}
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="relative">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="relative shrink-0">
                                 <div className="p-3 bg-gradient-to-br from-indigo-600 to-cyan-600 rounded-2xl shadow-lg shadow-indigo-500/25">
                                     <CircuitBoard className="w-8 h-8 text-white" />
                                 </div>
@@ -270,28 +270,28 @@ const HomePage = ({ onNavigate }) => {
                                 <div className="absolute inset-0 rounded-2xl border-2 border-indigo-400/50" style={{ animation: 'pulse-ring 2s ease-out infinite' }} />
                             </div>
                             <div>
-                                <h1 className="text-4xl font-bold text-white tracking-tight">
+                                <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight">
                                     BatteryForge{' '}
                                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-cyan-400 to-indigo-400 bg-[length:200%_auto]" style={{ animation: 'gradient-x 4s ease infinite' }}>
                                         AI
                                     </span>
                                 </h1>
-                                <p className="text-sm text-slate-500 font-medium">
+                                <p className="text-xs md:text-sm text-slate-500 font-medium uppercase tracking-widest">
                                     Autonomous Intelligence Platform
                                 </p>
                             </div>
                         </div>
 
-                        <p className="text-lg text-slate-400 leading-relaxed mb-6">
+                        <p className="text-base md:text-xl text-slate-400 leading-relaxed mb-8 max-w-2xl">
                             End-to-end battery and PCB manufacturing intelligence powered by{' '}
                             <span className="text-indigo-400 font-medium">Gemini 3 Pro</span> — from defect detection to fleet-scale predictive analytics.
                         </p>
 
                         {/* Quick launch buttons */}
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-3">
                             <button
                                 onClick={() => onNavigate('pcb')}
-                                className="group px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 rounded-xl text-white font-medium text-sm shadow-lg shadow-indigo-500/25 transition-all flex items-center gap-2"
+                                className="group px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 rounded-xl text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 transition-all flex items-center gap-2"
                             >
                                 <Layers className="w-4 h-4" />
                                 BMS & Pack Assembly
@@ -299,7 +299,7 @@ const HomePage = ({ onNavigate }) => {
                             </button>
                             <button
                                 onClick={() => onNavigate('fleet')}
-                                className="px-5 py-2.5 bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 rounded-xl text-slate-300 font-medium text-sm transition-all flex items-center gap-2"
+                                className="px-6 py-3 bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 rounded-xl text-slate-300 font-semibold text-sm transition-all flex items-center gap-2"
                             >
                                 <Monitor className="w-4 h-4" />
                                 Fleet Monitor
@@ -307,26 +307,26 @@ const HomePage = ({ onNavigate }) => {
                         </div>
                     </div>
 
-                    {/* System status beacon */}
-                    <div className="hidden lg:block">
-                        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5 w-64">
-                            <div className="flex items-center gap-3 mb-4">
+                    {/* System status beacon - Hidden on small screens, shown on large */}
+                    <div className="hidden lg:block shrink-0">
+                        <div className="bg-slate-900/60 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 w-72">
+                            <div className="flex items-center gap-3 mb-5">
                                 <span className="relative flex h-3 w-3">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                                 </span>
-                                <span className="text-sm font-bold text-emerald-400 tracking-wide">ALL SYSTEMS ONLINE</span>
+                                <span className="text-sm font-bold text-emerald-400 tracking-wide uppercase">All Systems Online</span>
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {[
                                     { label: 'Gemini 3 Pro', status: 'Active', ok: true },
                                     { label: 'Physics Engine', status: 'Running', ok: true },
                                     { label: 'Vision Pipeline', status: 'Ready', ok: true },
                                     { label: 'WebSocket', status: wsStatus, ok: wsStatus === 'Connected' },
                                 ].map((s, i) => (
-                                    <div key={i} className="flex items-center justify-between">
-                                        <span className="text-xs text-slate-500">{s.label}</span>
-                                        <span className={`text-xs font-medium ${s.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                    <div key={i} className="flex items-center justify-between border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                                        <span className="text-xs text-slate-500 font-medium">{s.label}</span>
+                                        <span className={`text-xs font-bold ${s.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
                                             {s.status}
                                         </span>
                                     </div>
@@ -338,7 +338,7 @@ const HomePage = ({ onNavigate }) => {
             </div>
 
             {/* ============ STATS GRID ============ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-12">
                 <HeroStatCard
                     icon={Radio}
                     label="Active Fleet Packs"
@@ -375,15 +375,15 @@ const HomePage = ({ onNavigate }) => {
             </div>
 
             {/* ============ MAIN CONTENT ============ */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Feature Cards */}
-                <div className="lg:col-span-2 space-y-5">
-                    <div className="flex items-center gap-3 mb-2 animate-in fade-in duration-500">
-                        <h2 className="text-lg font-bold text-white">Workspaces</h2>
-                        <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="flex items-center gap-4 mb-2 animate-in fade-in duration-500">
+                        <h2 className="text-xl font-bold text-white tracking-tight">Intelligence Workspaces</h2>
+                        <div className="flex-1 h-px bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                         <FeatureCard
                             icon={Microscope}
                             title="Visual Intelligence"
@@ -432,47 +432,49 @@ const HomePage = ({ onNavigate }) => {
                 </div>
 
                 {/* Right Sidebar - Live Feed + Capabilities */}
-                <div className="space-y-5">
+                <div className="space-y-6">
                     {/* Live System Stream */}
-                    <div className="bg-slate-900/50 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-5 animate-in fade-in slide-in-from-right duration-700 delay-500">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                                <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                    <div className="bg-slate-900/50 backdrop-blur-xl border border-white/[0.06] rounded-2xl p-6 animate-in fade-in slide-in-from-right duration-700 delay-500">
+                        <div className="flex items-center justify-between mb-5">
+                            <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+                                <Radio className="w-4 h-4 text-emerald-500 animate-pulse" />
                                 Live Telemetry
                             </h3>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${wsStatus === 'Connected' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase ${wsStatus === 'Connected' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                                 }`}>{wsStatus}</span>
                         </div>
 
-                        <div className="bg-black/50 rounded-xl p-3 font-mono text-[11px] h-44 overflow-hidden border border-white/5">
-                            <div className="space-y-1.5">
+                        <div className="bg-black/50 rounded-xl p-4 font-mono text-[11px] h-52 overflow-hidden border border-white/5 relative">
+                            <div className="space-y-2">
                                 {logs.length === 0 ? (
-                                    <div className="text-slate-600 flex items-center gap-2 py-8 justify-center">
-                                        <Radio className="w-4 h-4 animate-pulse" /> Waiting for telemetry...
+                                    <div className="text-slate-600 flex flex-col items-center gap-3 py-12 justify-center">
+                                        <Radio className="w-6 h-6 animate-pulse" />
+                                        <span className="text-xs">Awaiting telemetry stream...</span>
                                     </div>
                                 ) : (
                                     logs.map((log, i) => (
                                         <div
                                             key={i}
-                                            className="text-emerald-500/80 animate-in fade-in slide-in-from-left-2 duration-200 flex items-start gap-1.5"
-                                            style={{ opacity: 1 - i * 0.1 }}
+                                            className="text-emerald-500/80 animate-in fade-in slide-in-from-left-2 duration-200 flex items-start gap-2"
+                                            style={{ opacity: 1 - i * 0.12 }}
                                         >
-                                            <span className="text-indigo-500/60 select-none shrink-0">{'>'}</span>
-                                            <span className="break-all">{log}</span>
+                                            <span className="text-indigo-500/60 select-none shrink-0 font-bold">{'>'}</span>
+                                            <span className="break-all leading-relaxed">{log}</span>
                                         </div>
                                     ))
                                 )}
                             </div>
+                            <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
                         </div>
                     </div>
 
                     {/* AI Capabilities Card */}
-                    <div className="bg-gradient-to-br from-indigo-950/50 to-slate-900/50 backdrop-blur-xl border border-indigo-500/10 rounded-2xl p-5 animate-in fade-in slide-in-from-right duration-700 delay-700">
-                        <div className="flex items-center gap-2 mb-4">
+                    <div className="bg-gradient-to-br from-indigo-950/40 to-slate-900/60 backdrop-blur-xl border border-indigo-500/10 rounded-2xl p-6 animate-in fade-in slide-in-from-right duration-700 delay-700">
+                        <div className="flex items-center gap-2 mb-5">
                             <Sparkles className="w-4 h-4 text-indigo-400" />
-                            <h3 className="text-sm font-semibold text-white">AI Capabilities</h3>
+                            <h3 className="text-sm font-bold text-white uppercase tracking-wider">AI Core Capabilities</h3>
                         </div>
-                        <div className="space-y-2.5">
+                        <div className="grid grid-cols-1 gap-2">
                             {[
                                 { icon: Eye, label: 'Vision Defect Detection', color: 'purple' },
                                 { icon: Wrench, label: 'Predictive Maintenance', color: 'orange' },
@@ -480,11 +482,11 @@ const HomePage = ({ onNavigate }) => {
                                 { icon: Factory, label: 'Process Control Loop', color: 'cyan' },
                                 { icon: Shield, label: 'Safety Event Analysis', color: 'red' },
                             ].map((cap, i) => (
-                                <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
-                                    <div className={`p-1.5 bg-${cap.color}-500/10 rounded-lg`}>
-                                        <cap.icon className={`w-3.5 h-3.5 text-${cap.color}-400`} />
+                                <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-all group border border-transparent hover:border-white/5">
+                                    <div className={`p-2 bg-${cap.color}-500/10 rounded-lg group-hover:scale-110 transition-transform`}>
+                                        <cap.icon className={`w-4 h-4 text-${cap.color}-400`} />
                                     </div>
-                                    <span className="text-xs text-slate-400">{cap.label}</span>
+                                    <span className="text-xs font-medium text-slate-400 group-hover:text-slate-200 transition-colors">{cap.label}</span>
                                 </div>
                             ))}
                         </div>

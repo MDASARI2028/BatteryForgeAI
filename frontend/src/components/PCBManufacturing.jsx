@@ -770,19 +770,27 @@ const PCBManufacturing = () => {
             `}</style>
 
             {/* Header */}
-            <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-2xl border border-white/10 flex justify-between items-center">
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 md:p-6 rounded-2xl border border-white/10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-white">BMS & Pack Assembly <span className="text-purple-400">Gemini 3</span></h2>
-                    <p className="text-slate-400 text-sm">Design Intelligence & Assembly QC</p>
+                    <h2 className="text-xl md:text-2xl font-bold text-white">BMS & Pack Assembly <span className="text-purple-400">Gemini 3</span></h2>
+                    <p className="text-slate-400 text-xs md:text-sm">Design Intelligence & Assembly QC</p>
                 </div>
-                <div className="flex gap-4">
-                    <LiveStatCard icon={Factory} label="Assembly Lines" value={4} unit="" color="cyan" />
-                    <LiveStatCard icon={TrendingUp} label="Pack Yield" value={98.5} unit="%" color="emerald" pulse />
+                <div className="flex gap-3 md:gap-4 w-full lg:w-auto">
+                    <div className="flex-1 lg:flex-none">
+                        <LiveStatCard icon={Factory} label="Lines" value={4} unit="" color="cyan" />
+                    </div>
+                    <div className="flex-1 lg:flex-none">
+                        <LiveStatCard icon={TrendingUp} label="Pack Yield" value={98.5} unit="%" color="emerald" pulse />
+                    </div>
                 </div>
             </div>
 
             {/* Timeline */}
-            <TabNavigation activeTab={activeTab} onTabClick={setActiveTab} />
+            <div className="overflow-x-auto pb-2 scrollbar-hide">
+                <div className="flex gap-3 min-w-[600px] md:min-w-0">
+                    <TabNavigation activeTab={activeTab} onTabClick={setActiveTab} />
+                </div>
+            </div>
 
             {/* Logs Overlay */}
             <div className="fixed bottom-4 right-4 w-80 bg-black/80 rounded-lg p-2 text-xs font-mono text-slate-300 pointer-events-none z-50">
